@@ -1,7 +1,7 @@
 #include "memo_scanner.h"
 
 /* mbi_list_init
- * 初始化内存信息链表
+ * malloc MBI_LIST 结构体链表(头尾)，将head 和 tail 初始化为 NULL
  * 参数: 无
  * 返回值: 内存信息链表
  */
@@ -17,8 +17,8 @@ MBI_LIST *mbi_list_init(void){
 }
 
 /* mbi_list_add
- * 向内存信息链表中添加节点
- * 参数: mbi_list 内存信息链表
+ * malloc MBI_NODE 结构体节点，将其加入内存信息链表
+ * 参数: mbi_list 内存信息链表(头尾)
  *       addr 内存地址
  *       size 内存大小
  * 返回值: 无
@@ -43,8 +43,8 @@ void mbi_list_add(MBI_LIST *mbi_list, PVOID addr, SIZE_T size){
 }
 
 /* free_mbi_list
- * 释放内存信息链表
- * 参数: mbi_list 内存信息链表
+ * 释放内存信息链表(头尾)
+ * 参数: mbi_list 内存信息链表(头尾)
  * 返回值: 无
  */
 void free_mbi_list(MBI_LIST *mbi_list){
@@ -58,6 +58,11 @@ void free_mbi_list(MBI_LIST *mbi_list){
     free(mbi_list);
 }
 
+/* memoli_init
+ * malloc MEMORY_LIST 结构体链表(头尾)，将head 和 tail 初始化为 NULL
+ * 参数: 无
+ * 返回值: 记忆链表
+ */
 MEMORY_LIST *memoli_init(void){
     MEMORY_LIST *memoli = malloc(sizeof(MEMORY_LIST));
     if (memoli == NULL) {
@@ -69,6 +74,11 @@ MEMORY_LIST *memoli_init(void){
     return memoli;
 }
 
+/* free_memoli
+ * 释放记忆链表(头尾) 以及 记忆链表中的值链表
+ * 参数: memoli 记忆链表(头尾)
+ * 返回值: 无
+ */
 void free_memoli(MEMORY_LIST *memoli){
     MEMORY_BLOCK *p = memoli->head;
     MEMORY_BLOCK *q;
@@ -89,6 +99,32 @@ void free_memoli(MEMORY_LIST *memoli){
     free(memoli);
 }
 
+void free_memoli_node(MEMORY_BLOCK *memoblk){
+    VALUE_BLOCK *r;
+    VALUE_BLOCK *s;
+    // free values first
+    r = memoblk->values;
+    while (r != NULL) {
+        s = r->next;
+        free(r);
+        r = s;
+    }
+    free(memoblk);
+}
+
+/* memoli_add_block
+ * 当我们添加一个信息块到memory_list时，我们需要附加传入一个值
+ * 这个值 用于添加一个 value_block 到 values 链表 来存储初始值，值是复制的
+ * malloc 一个 MEMORY_BLOCK 结构体节点，将其加入记忆链表
+ * malloc 一个 VALUE_BLOCK 结构体节点，将其加入值链表
+ * malloc 一个 value 内存
+ * 参数: memoli 记忆链表(头尾)
+ *       id 记忆块id
+ *       type 记忆块数据类型
+ *       addr 记忆块地址
+ *       value 记忆块的值
+ * 返回值: 无
+ */
 void memoli_add_block(MEMORY_LIST *memoli, int id, char type, LPVOID addr, 
         void *value){
 
@@ -99,6 +135,7 @@ void memoli_add_block(MEMORY_LIST *memoli, int id, char type, LPVOID addr,
     node->addr = addr;
     node->id = id;
     node->type = type;
+    // malloc value block and add it to values
     node->values = add_valueblk_multy(value, type);
     node->next = NULL;
 
@@ -111,203 +148,171 @@ void memoli_add_block(MEMORY_LIST *memoli, int id, char type, LPVOID addr,
     }
 }
 
+/* memoblk_update_value
+ * 当我们更新一个信息块的值时，我们需要附加传入一个值
+ * 这个值 用于添加一个 value_block 到 values 链表，值是复制的
+ * malloc 一个 VALUE_BLOCK 结构体节点，将其加入值链表
+ * malloc 一个 value 内存
+ * 参数: memoli 记忆链表(头尾)
+ *       type 记忆块数据类型
+ *       value 记忆块的值
+ * 返回值: 无
+ */
 void memoblk_update_value(MEMORY_BLOCK *memoblk, char type, void * value){
     VALUE_BLOCK *last_v = memoblk->values;
     memoblk->values = add_valueblk_multy(value, type);
     memoblk->values->next = last_v;
 }
 
+/* add_valueblk_multy
+ * malloc 一个 VALUE_BLOCK 结构体节点，将其加入值链表
+ * malloc 一个 value 内存，value_blk->value 指向该内存
+ * 参数: value 记忆块的值
+ *       type 记忆块数据类型
+ * 返回值: 无
+ */
 VALUE_BLOCK *add_valueblk_multy(void *value, char type){
     VALUE_BLOCK * value_blk = malloc(sizeof(VALUE_BLOCK));
     if (value_blk == NULL) error(1, "malloc failed");
     value_blk->next = NULL;
     value_blk->time = 0;
-
-    if (type == INT_8_TYPE) value_blk->value = memoblk_v_int_8(value);
-    if (type == INT_16_TYPE) value_blk->value = memoblk_v_int_16(value);
-    if (type == INT_32_TYPE) value_blk->value = memoblk_v_int_32(value);
-    if (type == INT_64_TYPE) value_blk->value = memoblk_v_int_64(value);
-    if (type == UINT_8_TYPE) value_blk->value = memoblk_v_uint_8(value);
-    if (type == UINT_16_TYPE) value_blk->value = memoblk_v_uint_16(value);
-    if (type == UINT_32_TYPE) value_blk->value = memoblk_v_uint_32(value);
-    if (type == UINT_64_TYPE) value_blk->value = memoblk_v_uint_64(value);
-    if (type == FLOAT_TYPE) value_blk->value = memoblk_v_float(value);
-    if (type == DOUBLE_TYPE) value_blk->value = memoblk_v_double(value);
-    if (type == LONG_DOUBLE_TYPE)
-    value_blk->value = memoblk_v_long_double(value);
+    value_blk->value = malloc_cpy_value_multy(type, value);
     return value_blk;
 }
 
+/* value_cmp_multy
+* 比较两个值的大小
+* 参数: type 数据类型
+*       v1 指向第一个值的指针
+*       v2 指向第二个值的指针
+* 返回值: BIGGER_THAN, SMALLER_THAN, EQUAL
+*/
 int value_cmp_multy(char type, void * v1, void * v2){
+    compare_func cmpfun = multy_cmp_func_map[type];
+    return cmpfun(v1, v2);
+}
+
+/* malloc_cpy_value_multy
+* malloc 一个 value 内存, 并将value的值复制到该内存
+* 参数: type 数据类型
+*       value 指向值的指针
+* 返回值: 指向新malloc的内存的指针
+*/
+void * malloc_cpy_value_multy(char type, void *value){
+    void *p = malloc(size_map[type]);
+    if (p == NULL) {
+        error(1, "malloc failed");
+    }
+    memcpy(p, value, size_map[type]); // 使用memcpy进行深复制
+    return p;
+}
+
+
+char str_to_value_type_flag(char *str){
+    if (strcmp(str, "1b") == 0) return INT_8_TYPE;
+    if (strcmp(str, "u1b") == 0) return UINT_8_TYPE;
+    if (strcmp(str, "2b") == 0) return INT_16_TYPE;
+    if (strcmp(str, "u2b") == 0) return UINT_16_TYPE;
+    if (strcmp(str, "4b") == 0) return INT_32_TYPE;
+    if (strcmp(str, "u4b") == 0) return UINT_32_TYPE;
+    if (strcmp(str, "8b") == 0) return INT_64_TYPE;
+    if (strcmp(str, "u8b") == 0) return UINT_64_TYPE;
+    if (strcmp(str, "f") == 0) return FLOAT_TYPE;
+    if (strcmp(str, "d") == 0) return DOUBLE_TYPE;
+    if (strcmp(str, "ld") == 0) return LONG_DOUBLE_TYPE;
+}
+
+char *value_type_flag_to_str(char type){
+    char *str = malloc(4);
+    if (type == INT_8_TYPE) strcpy(str, "1b");
+    if (type == UINT_8_TYPE) strcpy(str, "u1b");
+    if (type == INT_16_TYPE) strcpy(str, "2b"); 
+    if (type == UINT_16_TYPE) strcpy(str, "u2b");
+    if (type == INT_32_TYPE) strcpy(str, "4b");
+    if (type == UINT_32_TYPE) strcpy(str, "u4b");
+    if (type == INT_64_TYPE) strcpy(str, "8b");
+    if (type == UINT_64_TYPE) strcpy(str, "u8b");
+    if (type == FLOAT_TYPE) strcpy(str, "f");
+    if (type == DOUBLE_TYPE) strcpy(str, "d");
+    if (type == LONG_DOUBLE_TYPE) strcpy(str, "ld");
+    return str;
+}
+
+void *str_to_multy_value(char type, char * str){
     if (type == INT_8_TYPE){
-        if (*(int8_t *)v1 > *(int8_t *)v2) return BIGGER_THAN;
-        if (*(int8_t *)v1 < *(int8_t *)v2) return SMALLER_THAN;
-        return EQUAL;
+        int8_t *p = malloc(sizeof(int8_t));
+        *p = (int8_t)atoi(str);
+        return p;
+    } else if (type == INT_16_TYPE){
+        int16_t *p = malloc(sizeof(int16_t));
+        *p = (int16_t)atoi(str);
+        return p;
+    } else if (type == INT_32_TYPE){
+        int32_t *p = malloc(sizeof(int32_t));
+        *p = (int32_t)atoi(str);
+        return p;
+    } else if (type == INT_64_TYPE){
+        int64_t *p = malloc(sizeof(int64_t));
+        *p = (int64_t)atoi(str);
+        return p;
+    } else if (type == UINT_8_TYPE){
+        uint8_t *p = malloc(sizeof(uint8_t));
+        *p = (uint8_t)atoi(str);
+        return p;
+    } else if (type == UINT_16_TYPE){
+        uint16_t *p = malloc(sizeof(uint16_t));
+        *p = (uint16_t)atoi(str);
+        return p;
+    } else if (type == UINT_32_TYPE){
+        uint32_t *p = malloc(sizeof(uint32_t));
+        *p = (uint32_t)atoi(str);
+        return p;
+    } else if (type == UINT_64_TYPE){
+        uint64_t *p = malloc(sizeof(uint64_t));
+        *p = (uint64_t)atoi(str);
+        return p;
+    } else if (type == FLOAT_TYPE){
+        float *p = malloc(sizeof(float));
+        *p = (float)atof(str);
+        return p;
+    } else if (type == DOUBLE_TYPE){
+        double *p = malloc(sizeof(double));
+        *p = (double)atof(str);
+        return p;
+    } else if (type == LONG_DOUBLE_TYPE){
+        long double *p = malloc(sizeof(long double));
+        *p = (long double)atof(str);
+        return p;
     }
-    if (type == INT_16_TYPE){
-        if (*(int16_t *)v1 > *(int16_t *)v2) return BIGGER_THAN;
-        if (*(int16_t *)v1 < *(int16_t *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == INT_32_TYPE){
-        if (*(int32_t *)v1 > *(int32_t *)v2) return BIGGER_THAN;
-        if (*(int32_t *)v1 < *(int32_t *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == INT_64_TYPE){
-        if (*(int64_t *)v1 > *(int64_t *)v2) return BIGGER_THAN;
-        if (*(int64_t *)v1 < *(int64_t *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == UINT_8_TYPE){
-        if (*(uint8_t *)v1 > *(uint8_t *)v2) return BIGGER_THAN;
-        if (*(uint8_t *)v1 < *(uint8_t *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == UINT_16_TYPE){
-        if (*(uint16_t *)v1 > *(uint16_t *)v2) return BIGGER_THAN;
-        if (*(uint16_t *)v1 < *(uint16_t *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == UINT_32_TYPE){
-        if (*(uint32_t *)v1 > *(uint32_t *)v2) return BIGGER_THAN;
-        if (*(uint32_t *)v1 < *(uint32_t *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == UINT_64_TYPE){
-        if (*(uint64_t *)v1 > *(uint64_t *)v2) return BIGGER_THAN;
-        if (*(uint64_t *)v1 < *(uint64_t *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == FLOAT_TYPE){
-        if (*(float *)v1 > *(float *)v2) return BIGGER_THAN;
-        if (*(float *)v1 < *(float *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == DOUBLE_TYPE){
-        if (*(double *)v1 > *(double *)v2) return BIGGER_THAN;
-        if (*(double *)v1 < *(double *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    if (type == LONG_DOUBLE_TYPE){
-        if (*(long double *)v1 > *(long double *)v2) return BIGGER_THAN;
-        if (*(long double *)v1 < *(long double *)v2) return SMALLER_THAN;
-        return EQUAL;
-    }
-    return -1;
 }
 
-int sizeof_multy_type(char type){
-    if (type == INT_8_TYPE) return sizeof(int8_t);
-    if (type == INT_16_TYPE) return sizeof(int16_t);
-    if (type == INT_32_TYPE) return sizeof(int32_t);
-    if (type == INT_64_TYPE) return sizeof(int64_t);
-    if (type == UINT_8_TYPE) return sizeof(uint8_t);
-    if (type == UINT_16_TYPE) return sizeof(uint16_t);
-    if (type == UINT_32_TYPE) return sizeof(uint32_t);
-    if (type == UINT_64_TYPE) return sizeof(uint64_t);
-    if (type == FLOAT_TYPE) return sizeof(float);
-    if (type == DOUBLE_TYPE) return sizeof(double);
-    if (type == LONG_DOUBLE_TYPE) return sizeof(long double);
-    return -1;
-}
+DEFINE_COMPARE_FUNC(int8_t, value_cmp_int8_t)
+DEFINE_COMPARE_FUNC(int16_t, value_cmp_int16_t)
+DEFINE_COMPARE_FUNC(int32_t, value_cmp_int32_t)
+DEFINE_COMPARE_FUNC(int64_t, value_cmp_int64_t)
+DEFINE_COMPARE_FUNC(uint8_t, value_cmp_uint8_t)
+DEFINE_COMPARE_FUNC(uint16_t, value_cmp_uint16_t)
+DEFINE_COMPARE_FUNC(uint32_t, value_cmp_uint32_t)
+DEFINE_COMPARE_FUNC(uint64_t, value_cmp_uint64_t)
+DEFINE_COMPARE_FUNC(float, value_cmp_float)
+DEFINE_COMPARE_FUNC(double, value_cmp_double)
+DEFINE_COMPARE_FUNC(long double, value_cmp_long_double)
 
-int8_t * memoblk_v_int_8(int8_t *value){
-    int8_t *p = malloc(sizeof(int8_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
+compare_func multy_cmp_func_map[11] = {
+    (compare_func)value_cmp_int8_t,
+    (compare_func)value_cmp_int16_t,
+    (compare_func)value_cmp_int32_t,
+    (compare_func)value_cmp_int64_t,
+    (compare_func)value_cmp_uint8_t,
+    (compare_func)value_cmp_uint16_t,
+    (compare_func)value_cmp_uint32_t,
+    (compare_func)value_cmp_uint64_t,
+    (compare_func)value_cmp_float,
+    (compare_func)value_cmp_double,
+    (compare_func)value_cmp_long_double
+};
 
-int16_t * memoblk_v_int_16(int16_t *value){
-    int16_t *p = malloc(sizeof(int16_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-int32_t * memoblk_v_int_32(int32_t *value){
-    int32_t *p = malloc(sizeof(int32_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-int64_t * memoblk_v_int_64(int64_t *value){
-    int64_t *p = malloc(sizeof(int64_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-uint8_t * memoblk_v_uint_8(uint8_t *value){
-    uint8_t *p = malloc(sizeof(uint8_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-uint16_t * memoblk_v_uint_16(uint16_t *value){
-    uint16_t *p = malloc(sizeof(uint16_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-uint32_t * memoblk_v_uint_32(uint32_t *value){
-    uint32_t *p = malloc(sizeof(uint32_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-uint64_t * memoblk_v_uint_64(uint64_t *value){
-    uint64_t *p = malloc(sizeof(uint64_t));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-float * memoblk_v_float(float *value){
-    float *p = malloc(sizeof(float));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-double * memoblk_v_double(double *value){
-    double *p = malloc(sizeof(double));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
-long double * memoblk_v_long_double(long double *value){
-    long double *p = malloc(sizeof(long double));
-    if (p == NULL) {
-        error(1, "malloc failed");
-    }
-    *p = *value;
-    return p;
-}
-
+int size_map[11] = {sizeof(int8_t), sizeof(int16_t), sizeof(int32_t),
+                  sizeof(int64_t), sizeof(uint8_t), sizeof(uint16_t),
+                  sizeof(uint32_t), sizeof(uint64_t), sizeof(float),
+                  sizeof(double), sizeof(long double)};

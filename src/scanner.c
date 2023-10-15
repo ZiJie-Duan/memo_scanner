@@ -66,12 +66,11 @@ MBI_LIST * scanf_subt_memo_addr(HANDLE hProcess){
         }
         lpAddress += mbi.RegionSize;
     }
-    error(ERROR_SIMPLE, "scanf_subt_memo_addr");
+    return mbi_list;
 }
 
 
 int scanf_memo_exat_multy_type(GLOBAL_INFO *g_info, char type, void *value){
-    info_print(INFO, "running..", "scanf_memo_4_byte");
 
     SIZE_T bytesRead; // ReadProcessMemory 读取的字节数
     PVOID address;  // 读取的内存地址
@@ -94,7 +93,7 @@ int scanf_memo_exat_multy_type(GLOBAL_INFO *g_info, char type, void *value){
         }
 
         // 针对不同的数据类型预留 扫描安全空间，防止越界
-        int end_safe_len = mbin->RegionSize - sizeof_multy_type(type) + 1;
+        int end_safe_len = mbin->RegionSize - size_map[type] + 1;
         void *data_p;  //一个通用类型的指针，用来扫描数据
 
         // 遍历内存所有数据
@@ -103,13 +102,6 @@ int scanf_memo_exat_multy_type(GLOBAL_INFO *g_info, char type, void *value){
             data_p = (void *)&buffer[i]; //指向数据
             // 比较数据 如果数据相等 则记录该内存块
             if (value_cmp_multy(type, data_p, value) == EQUAL){
-
-                // print debug info
-                sprintf(message, "find a int: %d", value);
-                info_print(INFO_DEBUG, message, "scanf_memo_4_byte");
-                sprintf(message, "address: %p", (PVOID)((char*)address+i));
-                info_print(INFO_DEBUG, message, "scanf_memo_4_byte");
-
                 // 加入记忆链表
                 memoli_add_block(g_info->memory_list, 
                                  num_of_result,
@@ -124,40 +116,49 @@ int scanf_memo_exat_multy_type(GLOBAL_INFO *g_info, char type, void *value){
     return num_of_result;
 }
 
-// /* filt_scanf_memo_4_byte
-// * 过滤扫描结果
-// * 参数: hProcess 进程句柄
-// *       head 扫描结果链表头指针
-// *       value 待过滤的整数
-// * 返回值: INT 过滤结果个数
-// */
-// int filt_scanf_memo_4_byte(GLOBAL_INFO *g_info, int value){
-//     info_print(INFO, "running..", "filt_scanf_memo_4_byte");
 
+int filt_scanf_memo_exat_multy(GLOBAL_INFO *g_info, void *value){
+    info_print(INFO, "running..", "filt_scanf_memo_4_byte");
 
+    int8_t buffer[8]; //8*8=64位, 用于存储读取的内存数据
 
-//     int buffer;
-//     SIZE_T bytesRead;
-//     int num_of_result = 0;
-//     MEMO_NODE_4_BYTE *temp;
-//     MEMO_NODE_4_BYTE *p;
-    
-//     for (MEMO_NODE_4_BYTE *p = *head; p != NULL;){
-//         if (ReadProcessMemory(hProcess, (LPCVOID)p->addr, 
-//                                 &buffer, sizeof(int), &bytesRead) == 0){
-//             // 错误处理
-//             error(ERROR_SIMPLE, "ReadProcessMemory ERROR");
-//             p = p->next;
-//         } else {
-//             // 正常处理
-//             if (buffer == value){
-//                 // 更新 node value
-//                 printf("find a int: %d\n", value);
-//                 p->value = buffer;
-//                 num_of_result++;
-//                 p = p->next;
+    MEMORY_BLOCK * root = malloc(sizeof(MEMORY_BLOCK));
+    root->next = g_info->memory_list->head;
+    MEMORY_BLOCK * pre = root;
 
-// }
+    int count = 0;
+
+    for (MEMORY_BLOCK *mbk = root->next; mbk != NULL; ){
+
+        if (ReadProcessMemory(g_info->hProcess, (LPCVOID)mbk->addr, 
+                              &buffer, size_map[mbk->type], NULL) == 0){
+            // 错误处理
+            error(ERROR_SIMPLE, "ReadProcessMemory ERROR");
+            pre = mbk;
+            mbk = mbk->next;
+            continue;
+        }
+
+        int res = value_cmp_multy(mbk->type, buffer, value);
+
+        if (res != EQUAL){
+            // 如果不相等, 则删除该节点
+            pre->next = mbk->next;
+            MEMORY_BLOCK *temp = mbk;
+            mbk = mbk->next;
+            free_memoli_node(temp);
+
+        } else if (res == EQUAL){
+            // 如果相等, 则继续遍历
+            memoblk_update_value(mbk, mbk->type, value);
+            pre = mbk;
+            mbk = mbk->next;
+            count++;
+        }
+    }
+    g_info->memory_list->head = root->next;
+    return count;
+}
 
 
 void set_memo_4_byte(HANDLE hProcess, LPVOID addr, int value){

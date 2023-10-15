@@ -15,50 +15,39 @@ void init_g_info(GLOBAL_INFO *g_info){
 }
 
 
-// void scanf_memo_4_byte_core(HANDLE hProcess){
-//     info_print(INFO, "running..", "scanf_memo_4_byte_core");
-//     info_print(INFO_NECESSARY, "Scanf memory with 4 byte INT", 
-//                "scanf_memo_4_byte_core");
-
-//     int value;
-//     char msg[128]; // 打印缓冲区
+void scanf_memo_exat(GLOBAL_INFO *g_info, char type, char *value){
+    info_print(INFO, "running..", "scanf_memo_exat");
+    info_print(INFO_NECESSARY, "Scanf memory with exact value", 
+               "scanf_memo_exat");
     
-//     MBIMS mbim;
-//     int mbim_len;
+    // 将字符串转换为 特定类型的值
+    void *value_ptr = str_to_multy_value(type, value);
+    if (value_ptr == NULL) {
+        error(1, "str_to_multy_value failed");
+    }
 
-//     MEMO_NODE_4_BYTE *head = NULL;
+    int num_of_result = 0;
+    num_of_result = scanf_memo_exat_multy_type(g_info, type, value_ptr);
+    printf("Found %d results.\n", num_of_result);
+    free(value_ptr);
+}
 
-//     scanf_subt_memo_addr(hProcess, mbim, &mbim_len); 
 
-//     sprintf(msg, "find %d writable memory region", mbim_len);
-//     info_print(INFO_NECESSARY, msg, "scanf_memo_4_byte_core");
+void filt_scanf_memo_exat(GLOBAL_INFO *g_info, char *value){
+    info_print(INFO, "running..", "filt_scanf_memo_exat");
+    info_print(INFO_NECESSARY, "Filter memory with exact value", 
+               "filt_scanf_memo_exat");
 
-//     printf("Scan Value (int 4byte): ");
-//     scanf("%d", &value);
-//     int resnum = scanf_memo_4_byte(hProcess, mbim, mbim_len, value, &head);
-//     printf("test finished1 \n");//``````````````````````````````````````````````````
-//     for (MEMO_NODE_4_BYTE *p = head; p != NULL; p = p->next) {
-//         printf("addr: %p  | ", p->addr);
-//         printf("value: %d\n", p->value);
-//     }
-//     printf("find %d result\n", resnum);
+    // 关于 扫描的类型, 我大致分为，精确扫描，和 模糊扫描
+    // 精确扫描中 仅支持 单类型扫描
+    // 模糊扫描中 还在考虑 
+    void *value_ptr = 
+        str_to_multy_value(g_info->memory_list->head->type, value);
+    if (value_ptr == NULL) {
+        error(1, "str_to_multy_value failed");
+    }
 
-//     while (1) {
-//         printf("Enter 1 to filt, 0 to exit, 2 to save: ");
-//         scanf("%d", &value);
-//         if (value == 0) {
-//             break;
-//         } else if (value == 1) {
-//             printf("Filt Scan Value (int 4byte): ");
-//             scanf("%d", &value);
-//             resnum = filt_scanf_memo_4_byte(hProcess, &head, value);
-//             printf("resnum: %d\n", resnum);
-//             for (MEMO_NODE_4_BYTE *p = head; p != NULL; p = p->next) {
-//                 printf("addr: %p  | ", p->addr);
-//                 printf("value: %d\n", p->value);
-//             }
-//         } else if (value == 2) {
-//             break;
-//         }
-//     }
-// }
+    int res = filt_scanf_memo_exat_multy(g_info, value_ptr);
+    printf("Found %d results.\n", res);
+    free(value_ptr);
+}

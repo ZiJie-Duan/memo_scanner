@@ -2,6 +2,9 @@
 
 
 int line_split(char *line, char (*command_array)[COMMAND_ARG_BUF_SIZE]){
+    if (line[0] == '\0'){
+        return 0;
+    }
 
     int index = 0;
     int last_line_index = 0;
