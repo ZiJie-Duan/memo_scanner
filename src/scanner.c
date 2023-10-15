@@ -165,6 +165,8 @@ void set_memo_4_byte(HANDLE hProcess, LPVOID addr, int value){
     info_print(INFO, "running..", "set_memo_4_byte");
     char message[128];  // 打印缓冲区
 
+    printf("set %p to %d\n", addr, value);
+
     if (WriteProcessMemory(hProcess, addr, &value, sizeof(int), NULL) == 0){
         error(ERROR_SIMPLE, "WriteProcessMemory ERROR");
     } else {

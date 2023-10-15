@@ -23,7 +23,9 @@ void help(void){
     printf(" h ------------------------- help\n");
     printf(" q ------------------------- quit\n");
     printf(" sm@[type]@[value]@--------- scan value with type\n");
-    printf(" fs@[value]@---------------- filt scan value\n");
+    printf(" fsm@[value]@--------------- filt scan value\n");
+    printf(" mp ------------------------ print memory list\n");
+    printf(" sem@[addr]@[value]@ ------- set memory value\n");
 }
 
 

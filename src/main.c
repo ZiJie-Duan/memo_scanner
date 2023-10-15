@@ -15,15 +15,15 @@ void command_classifier(char (*command_array)[COMMAND_ARG_BUF_SIZE],
     } else if (strcmp(command_array[0], "mp") == 0){
         print_memolik_data(g_info->memory_list->head);
 
-    } else if (strcmp(command_array[0], "fs") == 0){
+    } else if (strcmp(command_array[0], "fsm") == 0){
         filt_scanf_memo_exat(g_info,
                              command_array[1]);
+
+    } else if (strcmp(command_array[0], "sem") == 0){
+        set_memo_4_byte(g_info->hProcess, 
+                        (LPVOID)strtoll(command_array[1], NULL, 16), 
+                        atoi(command_array[2]));
     }
-    // } else if (strcmp(command_array[0], "sem") == 0){
-    //     set_memo_4_byte(g_info->hProcess, 
-    //                     (LPVOID)strtol(command_array[1], NULL, 16), 
-    //                     atoi(command_array[2]));
-    // }
 }
 
 
